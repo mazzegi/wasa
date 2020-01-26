@@ -155,6 +155,12 @@ func NewElt(tag string, mods ...EltMod) *Elt {
 	return e
 }
 
+func Attr(k,v string) EltMod {
+	return func(e *Elt) {
+		e.AddAttr(k, v)
+	}
+}
+
 func ID(s string) EltMod {
 	return func(e *Elt) {
 		e.AddAttr("id", s)

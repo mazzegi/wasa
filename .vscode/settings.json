@@ -1,0 +1,10 @@
+{
+    "go.useLanguageServer": true,
+    "go.lintTool": "gometalinter",
+    "window.zoomLevel": 0,    
+    "go.installDependenciesWhenBuilding": true,
+    "go.toolsEnvVars": {
+        "GOOS": "js",
+        "GOARCH": "wasm"
+    }
+}

@@ -90,6 +90,7 @@ func (d *Document) registerEvent(event string) {
 				go func() {
 					log.Printf("doc:on: (%s) -> (%s). found in (%s)", event, target.Get("id").String(), time.Since(start))
 					defer d.signalRender()
+					//TODO: replace args by js.event
 					cb(d, target, vals[1:])
 				}()
 			}

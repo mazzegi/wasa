@@ -29,4 +29,7 @@ const (
 	InputTag  = "input"
 	ButtonTag = "button"
 	StyleTag  = "style"
+	H1Tag  = "h1"
+	H2Tag  = "h2"
+	H3Tag  = "h3"
 )

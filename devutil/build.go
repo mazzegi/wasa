@@ -21,9 +21,13 @@ func buildWASM(mainGo string, out string) error {
 		return err
 	}
 	defer os.Chdir(wd)
+
 	mainDir := filepath.Dir(mainGo)
 	mainFile := filepath.Base(mainGo)
 	os.Chdir(mainDir)
+
+	cwd, _ := os.Getwd()
+	fmt.Printf("build (%s) -> (%s) (wd=%s)\n", mainFile, out, cwd)
 
 	start := time.Now()
 	cmd := exec.Command("go", "build", "-o", out, mainFile)
