@@ -17,7 +17,7 @@ type Document struct {
 	renderC chan struct{}
 }
 
-func NewDocument() (*Document, error) {
+func NewDocument(title string) (*Document, error) {
 	glb := js.Global()
 	if !isJSValueValid(glb) {
 		return nil, errors.Errorf("js-global is not valid (%s)", glb.Type().String())
@@ -36,6 +36,7 @@ func NewDocument() (*Document, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "create-body")
 	}
+	jDoc.Set("title", title)
 	return doc, nil
 }
 
