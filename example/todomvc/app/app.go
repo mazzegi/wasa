@@ -4,27 +4,31 @@ import (
 	"log"
 
 	"github.com/mazzegi/wasa"
+	"github.com/mazzegi/wasa/example/todomvc/backend"
 )
 
 type App struct {
-	root   *wasa.Elt
-	doc    *wasa.Document
-	repo   *repo
-	header *Header
-	main   *Main
-	footer *Footer
+	root    *wasa.Elt
+	doc     *wasa.Document
+	backend *backend.Backend
+	header  *Header
+	main    *Main
+	footer  *Footer
 }
 
-func New() (*App, error) {
+func New(be *backend.Backend) (*App, error) {
 	doc, err := wasa.NewDocument("WASA / TodoMVC")
 	if err != nil {
 		return nil, err
 	}
 	a := &App{
-		root: wasa.NewElt("section", wasa.Class("todoapp")),
-		doc:  doc,
-		repo: newRepo(),
+		root:    wasa.NewElt("section", wasa.Class("todoapp")),
+		doc:     doc,
+		backend: be,
 	}
+	a.backend.Subscribe(func() {
+		a.render()
+	})
 
 	a.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(baseCSS)))
 	a.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(indexCSS)))
@@ -41,15 +45,17 @@ func (a *App) Run() {
 }
 
 func (a *App) setupUI() {
-	a.header = NewHeader(a.doc)
-	a.main = NewMain(a.doc)
-	a.footer = NewFooter(a.doc)
+	a.header = NewHeader(a.doc, a.backend)
+	a.main = NewMain(a.doc, a.backend)
+	a.footer = NewFooter(a.doc, a.backend)
 	a.root.Append(a.header.Elt(), a.main.Elt(), a.footer.Elt())
 }
 
 func (a *App) render() {
-	a.header.render(a.repo)
-	a.main.render(a.repo)
-	a.footer.render(a.repo)
+	log.Printf("app: render ...")
+	a.header.render()
+	a.main.render()
+	a.footer.render()
 	a.root.Invalidate()
+	log.Printf("app: render ... done")
 }

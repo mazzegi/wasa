@@ -1,20 +1,28 @@
 package app
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/mazzegi/wasa"
+	"github.com/mazzegi/wasa/example/todomvc/backend"
 )
 
 type Footer struct {
-	root *wasa.Elt
-	doc  *wasa.Document
+	root       *wasa.Elt
+	doc        *wasa.Document
+	backend    *backend.Backend
+	cntElt     *wasa.Elt
+	aAll       *wasa.Elt
+	aActive    *wasa.Elt
+	aCompleted *wasa.Elt
 }
 
-func NewFooter(doc *wasa.Document) *Footer {
+func NewFooter(doc *wasa.Document, backend *backend.Backend) *Footer {
 	e := &Footer{
-		root: wasa.NewElt("footer", wasa.Class("footer")),
-		doc:  doc,
+		root:    wasa.NewElt("footer", wasa.Class("footer")),
+		doc:     doc,
+		backend: backend,
 	}
 	e.setupUI()
 	return e
@@ -25,30 +33,38 @@ func (e *Footer) Elt() *wasa.Elt {
 }
 
 func (e *Footer) setupUI() {
-	cntElt := wasa.NewElt("span", wasa.Class("todo-count"), wasa.Data("0 item left"))
+	e.cntElt = wasa.NewElt("span", wasa.Class("todo-count"), wasa.Data("0 item left"))
 
 	ulFilterElt := wasa.NewElt("ul", wasa.Class("filters"))
+	ulFilterElt.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(`
+	a:hover{
+		cursor: pointer;
+	}
+	`)))
 
 	liAll := wasa.NewElt("li")
-	aAll := wasa.NewElt("a", wasa.Class("selected"), wasa.Data("All"))
-	e.doc.Callback(wasa.ClickEvent, aAll, func(e *wasa.Event) {
+	e.aAll = wasa.NewElt("a", wasa.Class("selected"), wasa.Data("All"))
+	e.doc.Callback(wasa.ClickEvent, e.aAll, func(evt *wasa.Event) {
 		log.Printf("filter:all:clicked")
+		e.backend.ChangeFilter(backend.All)
 	})
-	liAll.Append(aAll)
+	liAll.Append(e.aAll)
 
 	liActive := wasa.NewElt("li")
-	aActive := wasa.NewElt("a", wasa.Data("Active"))
-	e.doc.Callback(wasa.ClickEvent, aActive, func(e *wasa.Event) {
+	e.aActive = wasa.NewElt("a", wasa.Data("Active"))
+	e.doc.Callback(wasa.ClickEvent, e.aActive, func(evt *wasa.Event) {
 		log.Printf("filter:active:clicked")
+		e.backend.ChangeFilter(backend.Active)
 	})
-	liActive.Append(aActive)
+	liActive.Append(e.aActive)
 
 	liCompleted := wasa.NewElt("li")
-	aCompleted := wasa.NewElt("a", wasa.Data("Completed"))
-	e.doc.Callback(wasa.ClickEvent, aCompleted, func(e *wasa.Event) {
+	e.aCompleted = wasa.NewElt("a", wasa.Data("Completed"))
+	e.doc.Callback(wasa.ClickEvent, e.aCompleted, func(evt *wasa.Event) {
 		log.Printf("filter:completed:clicked")
+		e.backend.ChangeFilter(backend.Completed)
 	})
-	liCompleted.Append(aCompleted)
+	liCompleted.Append(e.aCompleted)
 	ulFilterElt.Append(
 		liAll,
 		liActive,
@@ -56,18 +72,34 @@ func (e *Footer) setupUI() {
 	)
 
 	clearCompletedElt := wasa.NewElt("button", wasa.Class("clear-completed"), wasa.Data("Clear completed"))
-	e.doc.Callback(wasa.ClickEvent, clearCompletedElt, func(e *wasa.Event) {
+	e.doc.Callback(wasa.ClickEvent, clearCompletedElt, func(evt *wasa.Event) {
 		log.Printf("clear completed")
+		e.backend.DeleteCompleted()
 	})
 
-	e.root.Append(cntElt, ulFilterElt, clearCompletedElt)
+	e.root.Append(e.cntElt, ulFilterElt, clearCompletedElt)
 	e.root.Hidden = true
 }
 
-func (e *Footer) render(r *repo) {
-	if r.isEmpty() {
+func (e *Footer) render() {
+	if e.backend.IsEmpty() {
 		e.root.Hidden = true
 	} else {
 		e.root.Hidden = false
 	}
+	wasa.Data(fmt.Sprintf("%d item(s) left", e.backend.Count()))(e.cntElt)
+
+	wasa.Class("")(e.aAll)
+	wasa.Class("")(e.aActive)
+	wasa.Class("")(e.aCompleted)
+	switch e.backend.Filter() {
+	case backend.All:
+		wasa.Class("selected")(e.aAll)
+	case backend.Active:
+		wasa.Class("selected")(e.aActive)
+	case backend.Completed:
+		wasa.Class("selected")(e.aCompleted)
+	}
+
+	//e.cntElt.Invalidate()
 }

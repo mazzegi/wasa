@@ -1,9 +1,13 @@
 package main
 
-import "github.com/mazzegi/wasa/example/todomvc/app"
+import (
+	"github.com/mazzegi/wasa/example/todomvc/app"
+	"github.com/mazzegi/wasa/example/todomvc/backend"
+)
 
 func main() {
-	a, err := app.New()
+	be := backend.New()
+	a, err := app.New(be)
 	if err != nil {
 		panic(err)
 	}
