@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ElementCallback func(doc *Document, target js.Value, vals []js.Value)
+type ElementCallback func(e *Event)
 
 type Attrs map[string]string
 
@@ -155,7 +155,7 @@ func NewElt(tag string, mods ...EltMod) *Elt {
 	return e
 }
 
-func Attr(k,v string) EltMod {
+func Attr(k, v string) EltMod {
 	return func(e *Elt) {
 		e.AddAttr(k, v)
 	}

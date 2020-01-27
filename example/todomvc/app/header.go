@@ -2,7 +2,6 @@ package app
 
 import (
 	"log"
-	"syscall/js"
 
 	"github.com/mazzegi/wasa"
 )
@@ -33,9 +32,8 @@ func (e *Header) setupUI() {
 		wasa.Attr("placeholder", "What needs to be done?"),
 		wasa.Attr("autofocus", ""),
 	)
-	e.doc.Callback(wasa.KeyupEvent, inElt, func(doc *wasa.Document, target js.Value, vals []js.Value) {
-		//code := target.Get("keyCode").String()
-		log.Printf("input: keyup (%s)", target.Get("keyCode").String())
+	e.doc.Callback(wasa.KeyupEvent, inElt, func(e *wasa.Event) {
+		log.Printf("input: keyup (%s)", e.JSEvent().Get("keyCode").String())
 	})
 	e.root.Append(inElt)
 }

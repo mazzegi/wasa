@@ -65,40 +65,36 @@ func (d *Document) CreateElementNode(tag string) (jsElt, error) {
 }
 
 //Callbacks
-func (d *Document) Callback(event string, elt *Elt, cb ElementCallback) {
-	d.registerEvent(event)
-	elt.callback(event, cb)
+func (d *Document) Callback(eventType string, elt *Elt, cb ElementCallback) {
+	d.registerEvent(eventType)
+	elt.callback(eventType, cb)
 }
 
-func (d *Document) registerEvent(event string) {
-	if _, contains := d.events[event]; contains {
+func (d *Document) registerEvent(eventType string) {
+	if _, contains := d.events[eventType]; contains {
 		return
 	}
-	log.Printf("doc: register-event (%s)", event)
-	d.addEventListener(event, js.FuncOf(func(this js.Value, vals []js.Value) interface{} {
-		if len(vals) == 0 {
-			return errors.Errorf("callback without args")
+	log.Printf("doc: register-event (%s)", eventType)
+	d.addEventListener(eventType, js.FuncOf(func(this js.Value, vals []js.Value) interface{} {
+		evt, err := NewEvent(d, eventType, this, vals)
+		if err != nil {
+			return err
 		}
-		target := vals[0].Get("target")
-		if !isJSValueValid(target) {
-			return errors.Errorf("invalid target")
-		}
-		log.Printf("doc:on: (%s) -> (%s)", event, target.Get("id").String())
+		log.Printf("doc:on: (%s) -> (%s)", eventType, evt.TargetID())
 		start := time.Now()
-		if elt, ok := d.root.findByTarget(target); ok {
-			if cb, ok := elt.findCallback(event); ok {
+		if elt, ok := d.root.findByTarget(evt.Target()); ok {
+			if cb, ok := elt.findCallback(eventType); ok {
 				go func() {
-					log.Printf("doc:on: (%s) -> (%s). found in (%s)", event, target.Get("id").String(), time.Since(start))
+					log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
 					defer d.signalRender()
-					//TODO: replace args by js.event
-					cb(d, target, vals[1:])
+					cb(evt)
 				}()
 			}
 		}
 
 		return nil
 	}))
-	d.events[event] = struct{}{}
+	d.events[eventType] = struct{}{}
 }
 
 func (d *Document) signalRender() {
