@@ -39,3 +39,7 @@ func (e *Header) setupUI() {
 	})
 	e.root.Append(inElt)
 }
+
+func (e *Header) render(r *repo) {
+
+}
