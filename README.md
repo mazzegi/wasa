@@ -1,2 +1,2 @@
 # wasa
-A tiny, lightweight framework, to create Web-Apps with Golang and Web-Assembly.
+A tiny library to create Web-Apps with Golang and WebAssembly.
