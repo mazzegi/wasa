@@ -1,18 +1,14 @@
 package devutil
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 
 	"github.com/pkg/errors"
 )
 
-const wasmFile = "lib.wasm"
-
-func buildWASM(mainGo string, out string) error {
+func BuildWASM(mainGo string, out string) error {
 	mainGo, _ = filepath.Abs(mainGo)
 	out, _ = filepath.Abs(out)
 
@@ -26,10 +22,6 @@ func buildWASM(mainGo string, out string) error {
 	mainFile := filepath.Base(mainGo)
 	os.Chdir(mainDir)
 
-	cwd, _ := os.Getwd()
-	fmt.Printf("build (%s) -> (%s) (wd=%s)\n", mainFile, out, cwd)
-
-	start := time.Now()
 	cmd := exec.Command("go", "build", "-o", out, mainFile)
 	cmd.Env = append(os.Environ(),
 		"GOARCH=wasm",
@@ -39,6 +31,5 @@ func buildWASM(mainGo string, out string) error {
 	if err != nil {
 		return errors.Wrapf(err, "go build: %s", string(stdErr))
 	}
-	fmt.Printf("build (%s) -> (%s) done in (%s)\n", mainGo, out, time.Since(start))
 	return nil
 }

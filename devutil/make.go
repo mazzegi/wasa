@@ -1,50 +1,77 @@
 package devutil
 
 import (
-	"fmt"
-	"html/template"
+	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 )
 
-func Make(dist, wasmExec, mainGo string) error {
-	err := os.MkdirAll(dist, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	bs, err := exec.Command("cp", wasmExec, dist).CombinedOutput()
-	if err != nil {
-		return errors.Errorf("cp wasm_exec.js: %s", string(bs))
-	}
-	fmt.Printf("copied wasm_exec.js (%s) -> (%s)\n", wasmExec, dist)
+type Manifest struct {
+	MainGo    string `json:"main"`
+	AssetsDir string `json:"assets,omitempty"`
+}
 
-	fIndex, err := os.Create(filepath.Join(dist, "index.html"))
+func loadManifest(dir string) (Manifest, error) {
+	file := filepath.Join(dir, "build.manifest.json")
+	f, err := os.Open(file)
 	if err != nil {
-		return errors.Wrap(err, "create index.html")
+		return Manifest{}, errors.Wrapf(err, "open (%s)", file)
 	}
-	defer fIndex.Close()
+	defer f.Close()
 
-	t, err := template.New("index.html").Parse(indexHTMLTemplate)
+	var m Manifest
+	err = json.NewDecoder(f).Decode(&m)
 	if err != nil {
-		return errors.Wrap(err, "parse index.html template")
+		return Manifest{}, errors.Wrapf(err, "decode (%s)", file)
 	}
-	data := struct {
-	}{}
-	err = t.Execute(fIndex, data)
-	if err != nil {
-		return errors.Wrap(err, "execute index.html template")
-	}
-	fmt.Printf("created index.html\n")
+	return m, nil
+}
 
-	wasmPath := filepath.Join(dist, wasmFile)
-	err = buildWASM(mainGo, wasmPath)
+func Make(srcDir, distDir string) error {
+	//scan manifest
+	manifest, err := loadManifest(srcDir)
 	if err != nil {
-		return errors.Wrap(err, "build wasm")
+		return errors.Wrap(err, "load manifest")
 	}
-	fmt.Printf("build wasm\n")
+
+	//
+	err = os.MkdirAll(distDir, os.ModePerm)
+	if err != nil {
+		return errors.Wrapf(err, "create dist-dir (%s)", distDir)
+	}
+
+	//copy wasm_exec.js and index.html
+	indexSource := filepath.Join(srcDir, "index.html")
+	wasmExecSource := filepath.Join(srcDir, "wasm_exec.js")
+	indexDest := filepath.Join(distDir, "index.html")
+	wasmExecDest := filepath.Join(distDir, "wasm_exec.js")
+
+	err = CopyFile(indexSource, indexDest)
+	if err != nil {
+		return errors.Wrapf(err, "copy (%s)", indexSource)
+	}
+	err = CopyFile(wasmExecSource, wasmExecDest)
+	if err != nil {
+		return errors.Wrapf(err, "copy (%s)", wasmExecSource)
+	}
+
+	if manifest.AssetsDir != "" {
+		assetsSource := filepath.Join(srcDir, manifest.AssetsDir)
+		assetsDest := filepath.Join(distDir, manifest.AssetsDir)
+		err = CopyDirectory(assetsSource, assetsDest)
+		if err != nil {
+			return errors.Wrapf(err, "copy (%s)", assetsSource)
+		}
+	}
+
+	//build
+	lib := filepath.Join(distDir, "lib.wasm")
+	err = BuildWASM(manifest.MainGo, lib)
+	if err != nil {
+		return errors.Wrapf(err, "build (%s)", manifest.MainGo)
+	}
 
 	return nil
 }
