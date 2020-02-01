@@ -125,7 +125,13 @@ func (e *Elt) findCallback(event string) (ElementCallback, bool) {
 
 // // some access helpers
 func (e *Elt) Call(method string, args ...interface{}) {
-	e.jsElt.call(method, args...)
+	if e.jsElt.isValid() {
+		e.jsElt.call(method, args...)
+	}
+}
+
+func (e *Elt) Get(names ...string) js.Value {
+	return e.jsElt.get(names...)
 }
 
 func (e *Elt) Value() string {

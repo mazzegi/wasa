@@ -1,5 +1,6 @@
 {
     "main": "cmd/main.go",
     "assets": "assets",
-    "css": "css"
+    "css": "css",
+    "env": "env.js"
 }

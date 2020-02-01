@@ -30,6 +30,9 @@ func New(be *backend.Backend) (*App, error) {
 		a.render()
 	})
 
+	api := doc.GetGlobal("wasaenv", "api").String()
+	log.Printf("api=(%s)", api)
+
 	a.setupUI()
 	a.render()
 	return a, nil

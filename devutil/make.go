@@ -12,6 +12,7 @@ type Manifest struct {
 	MainGo    string `json:"main"`
 	AssetsDir string `json:"assets,omitempty"`
 	CSSDir    string `json:"css,omitempty"`
+	EnvJS     string `json:"env,omitempty"`
 }
 
 func loadManifest(dir string) (Manifest, error) {
@@ -73,6 +74,15 @@ func Make(srcDir, distDir string) error {
 		err = CopyDirectory(cssSource, cssDest)
 		if err != nil {
 			return errors.Wrapf(err, "copy (%s)", cssSource)
+		}
+	}
+
+	if manifest.EnvJS != "" {
+		envSource := filepath.Join(srcDir, manifest.EnvJS)
+		envDest := filepath.Join(distDir, manifest.EnvJS)
+		err = CopyFile(envSource, envDest)
+		if err != nil {
+			return errors.Wrapf(err, "copy (%s)", envSource)
 		}
 	}
 

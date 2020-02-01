@@ -55,6 +55,20 @@ func (e jsElt) call(method string, args ...interface{}) {
 	e.jElt.Call(method, args...)
 }
 
+func (e jsElt) get(names ...string) js.Value {
+	curr := e.jElt
+	if !isJSValueValid(curr) {
+		return curr
+	}
+	for _, name := range names {
+		curr = curr.Get(name)
+		if !isJSValueValid(curr) {
+			return curr
+		}
+	}
+	return curr
+}
+
 func (e jsElt) appendChild(n jsNode) {
 	if !isJSValueValid(e.jElt) {
 		return

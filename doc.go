@@ -10,10 +10,12 @@ import (
 
 type Document struct {
 	jsElt
+	glb     js.Value
 	jDoc    js.Value
 	body    jsElt
 	events  map[string]struct{}
 	root    *Elt
+	focus   *Elt
 	renderC chan struct{}
 }
 
@@ -28,6 +30,7 @@ func NewDocument(title string) (*Document, error) {
 	}
 	doc := &Document{
 		jsElt:   newJSElt(jDoc),
+		glb:     glb,
 		jDoc:    jDoc,
 		events:  map[string]struct{}{},
 		renderC: make(chan struct{}),
@@ -62,6 +65,21 @@ func (d *Document) CreateElementNode(tag string) (jsElt, error) {
 		return undefinedJSElt(), errors.Errorf("doc-createElement returned invalid js-value (%s)", v.Type().String())
 	}
 	return newJSElt(v), nil
+}
+
+func (d *Document) GetGlobal(names ...string) js.Value {
+	curr := d.glb
+	for _, name := range names {
+		curr = curr.Get(name)
+		if !isJSValueValid(curr) {
+			return curr
+		}
+	}
+	return curr
+}
+
+func (d *Document) Focus(elt *Elt) {
+	d.focus = elt
 }
 
 //Callbacks
@@ -110,6 +128,10 @@ func (d *Document) Run(root *Elt) {
 		case <-d.renderC:
 			log.Printf("render ...")
 			d.render(d.root, d.body)
+			if d.focus != nil {
+				d.focus.Call("focus")
+				d.focus = nil
+			}
 		}
 	}
 }
