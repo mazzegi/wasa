@@ -124,6 +124,10 @@ func (e *Elt) findCallback(event string) (ElementCallback, bool) {
 }
 
 // // some access helpers
+func (e *Elt) Call(method string, args ...interface{}) {
+	e.jsElt.call(method, args...)
+}
+
 func (e *Elt) Value() string {
 	return e.jsElt.jElt.Get("value").String()
 }

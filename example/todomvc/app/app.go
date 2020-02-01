@@ -30,9 +30,6 @@ func New(be *backend.Backend) (*App, error) {
 		a.render()
 	})
 
-	a.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(baseCSS)))
-	a.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(indexCSS)))
-
 	a.setupUI()
 	a.render()
 	return a, nil

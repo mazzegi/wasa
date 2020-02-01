@@ -1,4 +1,5 @@
 {
     "main": "cmd/main.go",
-    "assets": "assets"
+    "assets": "assets",
+    "css": "css"
 }

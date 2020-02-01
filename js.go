@@ -17,7 +17,7 @@ func isJSValueValid(v js.Value) bool {
 }
 
 type jsNode interface {
-	jsValue() js.Value 
+	jsValue() js.Value
 }
 
 type jsElt struct {
@@ -49,6 +49,10 @@ func (e jsElt) isValid() bool {
 
 func (e jsElt) jsValue() js.Value {
 	return e.jElt
+}
+
+func (e jsElt) call(method string, args ...interface{}) {
+	e.jElt.Call(method, args...)
 }
 
 func (e jsElt) appendChild(n jsNode) {
