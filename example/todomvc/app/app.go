@@ -32,6 +32,8 @@ func New(be *backend.Backend) (*App, error) {
 
 	api := doc.GetGlobal("wasaenv", "api").String()
 	log.Printf("api=(%s)", api)
+	loc := doc.Location()
+	log.Printf("loc=(%s)", loc)
 
 	a.setupUI()
 	a.render()

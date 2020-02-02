@@ -2,6 +2,7 @@ package wasa
 
 import (
 	"log"
+	"net/url"
 	"syscall/js"
 	"time"
 
@@ -76,6 +77,12 @@ func (d *Document) GetGlobal(names ...string) js.Value {
 		}
 	}
 	return curr
+}
+
+func (d *Document) Location() *url.URL {
+	raw := d.GetGlobal("window", "location", "href").String()
+	url, _ := url.Parse(raw)
+	return url
 }
 
 func (d *Document) Focus(elt *Elt) {
