@@ -11,13 +11,14 @@ import (
 
 type Document struct {
 	jsElt
-	glb     js.Value
-	jDoc    js.Value
-	body    jsElt
-	events  map[string]struct{}
-	root    *Elt
-	focus   *Elt
-	renderC chan struct{}
+	glb         js.Value
+	jDoc        js.Value
+	body        jsElt
+	events      map[string]struct{}
+	root        *Elt
+	focus       *Elt
+	renderC     chan struct{}
+	afterRender []func()
 }
 
 func NewDocument(title string) (*Document, error) {
@@ -122,6 +123,10 @@ func (d *Document) registerEvent(eventType string) {
 	d.events[eventType] = struct{}{}
 }
 
+func (d *Document) AfterRender(cb func()) {
+	d.afterRender = append(d.afterRender, cb)
+}
+
 func (d *Document) signalRender() {
 	d.renderC <- struct{}{}
 }
@@ -138,6 +143,9 @@ func (d *Document) Run(root *Elt) {
 			if d.focus != nil {
 				d.focus.Call("focus")
 				d.focus = nil
+			}
+			for _, cb := range d.afterRender {
+				cb()
 			}
 		}
 	}

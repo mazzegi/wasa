@@ -1,9 +1,10 @@
 package app
 
 import (
+	"log"
+
 	"github.com/mazzegi/wasa"
 	"github.com/mazzegi/wasa/example/todomvc/backend"
-	"log"
 )
 
 type Main struct {
@@ -20,6 +21,9 @@ func NewMain(doc *wasa.Document, backend *backend.Backend) *Main {
 		backend: backend,
 	}
 	e.setupUI()
+	e.doc.AfterRender(func() {
+		log.Printf("after-render")
+	})
 	return e
 }
 
