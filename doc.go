@@ -108,14 +108,28 @@ func (d *Document) registerEvent(eventType string) {
 		}
 		log.Printf("doc:on: (%s) -> (%s)", eventType, evt.TargetID())
 		start := time.Now()
-		if elt, ok := d.root.findByTarget(evt.Target()); ok {
-			if cb, ok := elt.findCallback(eventType); ok {
-				go func() {
-					log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
-					defer d.signalRender()
-					cb(evt)
-				}()
+		if _, stack, ok := d.root.findByTarget(evt.Target()); ok {
+			if len(stack) > 0 {
+				for i := len(stack) - 1; i >= 0; i-- {
+					if cb, ok := stack[i].findCallback(eventType); ok {
+						log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
+						defer d.signalRender()
+						cb(evt)
+					}
+				}
 			}
+
+			// if cb, ok := elt.findCallback(eventType); ok {
+			// 	go func() {
+			// 		log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
+			// 		defer d.signalRender()
+			// 		cb(evt)
+			// 	}()
+			// } else if len(stack) > 0 {
+			// 	for i := len(stack) - 1; i >= 0; i-- {
+
+			// 	}
+			// }
 		}
 
 		return nil

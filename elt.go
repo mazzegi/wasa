@@ -138,16 +138,18 @@ func (e *Elt) Value() string {
 	return e.jsElt.jElt.Get("value").String()
 }
 
-func (e *Elt) findByTarget(target js.Value) (*Elt, bool) {
+func (e *Elt) findByTarget(target js.Value) (match *Elt, stack []*Elt, found bool) {
+	stack = []*Elt{e}
 	if e.jsElt.is(target) {
-		return e, true
+		return e, stack, true
 	}
 	for _, c := range e.Childs {
-		if fc, ok := c.findByTarget(target); ok {
-			return fc, true
+		if fc, cstack, ok := c.findByTarget(target); ok {
+			stack = append(stack, cstack...)
+			return fc, stack, true
 		}
 	}
-	return nil, false
+	return nil, stack, false
 }
 
 ///
