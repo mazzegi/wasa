@@ -115,6 +115,7 @@ func (d *Document) registerEvent(eventType string) {
 						log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
 						defer d.signalRender()
 						cb(evt)
+						return nil
 					}
 				}
 			}
