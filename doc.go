@@ -112,9 +112,11 @@ func (d *Document) registerEvent(eventType string) {
 			if len(stack) > 0 {
 				for i := len(stack) - 1; i >= 0; i-- {
 					if cb, ok := stack[i].findCallback(eventType); ok {
-						log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
-						defer d.signalRender()
-						cb(evt)
+						go func() {
+							log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
+							defer d.signalRender()
+							cb(evt)
+						}()
 						return nil
 					}
 				}
