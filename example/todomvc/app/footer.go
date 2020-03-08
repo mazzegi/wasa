@@ -2,10 +2,10 @@ package app
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/mazzegi/wasa"
 	"github.com/mazzegi/wasa/example/todomvc/backend"
+	"github.com/mazzegi/wasa/wlog"
 )
 
 type Footer struct {
@@ -45,7 +45,7 @@ func (e *Footer) setupUI() {
 	liAll := wasa.NewElt("li")
 	e.aAll = wasa.NewElt("a", wasa.Class("selected"), wasa.Data("All"))
 	e.doc.Callback(wasa.ClickEvent, e.aAll, func(evt *wasa.Event) {
-		log.Printf("filter:all:clicked")
+		wlog.Infof("filter:all:clicked")
 		e.backend.ChangeFilter(backend.All)
 	})
 	liAll.Append(e.aAll)
@@ -53,7 +53,7 @@ func (e *Footer) setupUI() {
 	liActive := wasa.NewElt("li")
 	e.aActive = wasa.NewElt("a", wasa.Data("Active"))
 	e.doc.Callback(wasa.ClickEvent, e.aActive, func(evt *wasa.Event) {
-		log.Printf("filter:active:clicked")
+		wlog.Infof("filter:active:clicked")
 		e.backend.ChangeFilter(backend.Active)
 	})
 	liActive.Append(e.aActive)
@@ -61,7 +61,7 @@ func (e *Footer) setupUI() {
 	liCompleted := wasa.NewElt("li")
 	e.aCompleted = wasa.NewElt("a", wasa.Data("Completed"))
 	e.doc.Callback(wasa.ClickEvent, e.aCompleted, func(evt *wasa.Event) {
-		log.Printf("filter:completed:clicked")
+		wlog.Infof("filter:completed:clicked")
 		e.backend.ChangeFilter(backend.Completed)
 	})
 	liCompleted.Append(e.aCompleted)
@@ -73,7 +73,7 @@ func (e *Footer) setupUI() {
 
 	clearCompletedElt := wasa.NewElt("button", wasa.Class("clear-completed"), wasa.Data("Clear completed"))
 	e.doc.Callback(wasa.ClickEvent, clearCompletedElt, func(evt *wasa.Event) {
-		log.Printf("clear completed")
+		wlog.Infof("clear completed")
 		e.backend.DeleteCompleted()
 	})
 

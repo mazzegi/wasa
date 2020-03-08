@@ -1,10 +1,9 @@
 package app
 
 import (
-	"log"
-
 	"github.com/mazzegi/wasa"
 	"github.com/mazzegi/wasa/example/todomvc/backend"
+	"github.com/mazzegi/wasa/wlog"
 )
 
 type Main struct {
@@ -22,7 +21,7 @@ func NewMain(doc *wasa.Document, backend *backend.Backend) *Main {
 	}
 	e.setupUI()
 	e.doc.AfterRender(func() {
-		log.Printf("after-render")
+		wlog.Infof("after-render")
 	})
 	return e
 }
@@ -72,14 +71,14 @@ func (e *Main) renderItem(item *backend.Item) {
 	}
 	e.doc.Callback(wasa.ClickEvent, toggleCompleted, func(evt *wasa.Event) {
 		e.backend.ToggleComplete(item.ID)
-		log.Printf("toggle-completed (%d)", item.ID)
+		wlog.Infof("toggle-completed (%d)", item.ID)
 	})
 
 	label := wasa.NewElt("label", wasa.Data(item.Text))
 	deleteBtn := wasa.NewElt("button", wasa.Class("destroy"))
 	e.doc.Callback(wasa.ClickEvent, deleteBtn, func(evt *wasa.Event) {
 		e.backend.Delete(item.ID)
-		log.Printf("delete (%d)", item.ID)
+		wlog.Infof("delete (%d)", item.ID)
 	})
 
 	view.Append(toggleCompleted, label, deleteBtn)

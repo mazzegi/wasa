@@ -1,11 +1,12 @@
 package wasa
 
 import (
-	"log"
 	"net/url"
 	"syscall/js"
 	"time"
 
+	"github.com/mazzegi/wasa/timing"
+	"github.com/mazzegi/wasa/wlog"
 	"github.com/pkg/errors"
 )
 
@@ -100,41 +101,28 @@ func (d *Document) registerEvent(eventType string) {
 	if _, contains := d.events[eventType]; contains {
 		return
 	}
-	log.Printf("doc: register-event (%s)", eventType)
+	wlog.Infof("doc: register-event (%s)", eventType)
 	d.addEventListener(eventType, js.FuncOf(func(this js.Value, vals []js.Value) interface{} {
 		evt, err := NewEvent(d, eventType, this, vals)
 		if err != nil {
 			return err
 		}
-		log.Printf("doc:on: (%s) -> (%s)", eventType, evt.TargetID())
+		wlog.Infof("doc:on: (%s) -> (%s)", eventType, evt.TargetID())
 		start := time.Now()
 		if _, stack, ok := d.root.findByTarget(evt.Target()); ok {
 			if len(stack) > 0 {
 				for i := len(stack) - 1; i >= 0; i-- {
 					if cb, ok := stack[i].findCallback(eventType); ok {
 						go func() {
-							log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
-							defer d.signalRender()
+							wlog.Infof("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
+							defer d.SignalRender()
 							cb(evt)
 						}()
 						return nil
 					}
 				}
 			}
-
-			// if cb, ok := elt.findCallback(eventType); ok {
-			// 	go func() {
-			// 		log.Printf("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
-			// 		defer d.signalRender()
-			// 		cb(evt)
-			// 	}()
-			// } else if len(stack) > 0 {
-			// 	for i := len(stack) - 1; i >= 0; i-- {
-
-			// 	}
-			// }
 		}
-
 		return nil
 	}))
 	d.events[eventType] = struct{}{}
@@ -144,26 +132,30 @@ func (d *Document) AfterRender(cb func()) {
 	d.afterRender = append(d.afterRender, cb)
 }
 
-func (d *Document) signalRender() {
+func (d *Document) SignalRender() {
 	d.renderC <- struct{}{}
 }
 
 func (d *Document) Run(root *Elt) {
-	log.Printf("doc: enter render loop ...")
+	wlog.Infof("doc: enter render loop ...")
 	d.root = root
 	d.root.mount(d, d.body)
 	for {
 		select {
 		case <-d.renderC:
-			log.Printf("render ...")
+			t := timing.New("doc-render")
+			t.Log("render")
 			d.render(d.root, d.body)
+			t.Log("after-render")
 			if d.focus != nil {
 				d.focus.Call("focus")
+				t.Log("after-focus")
 				d.focus = nil
 			}
 			for _, cb := range d.afterRender {
 				cb()
 			}
+			t.Log("after-render-callbacks")
 		}
 	}
 }

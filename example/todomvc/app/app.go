@@ -1,10 +1,9 @@
 package app
 
 import (
-	"log"
-
 	"github.com/mazzegi/wasa"
 	"github.com/mazzegi/wasa/example/todomvc/backend"
+	"github.com/mazzegi/wasa/wlog"
 )
 
 type App struct {
@@ -31,9 +30,9 @@ func New(be *backend.Backend) (*App, error) {
 	})
 
 	api := doc.GetGlobal("wasaenv", "api").String()
-	log.Printf("api=(%s)", api)
+	wlog.Infof("api=(%s)", api)
 	loc := doc.Location()
-	log.Printf("loc=(%s)", loc)
+	wlog.Infof("loc=(%s)", loc)
 
 	a.setupUI()
 	a.render()
@@ -41,9 +40,9 @@ func New(be *backend.Backend) (*App, error) {
 }
 
 func (a *App) Run() {
-	log.Printf("app: run ...")
+	wlog.Infof("app: run ...")
 	a.doc.Run(a.root)
-	log.Printf("app: run ... done")
+	wlog.Infof("app: run ... done")
 }
 
 func (a *App) setupUI() {
@@ -54,10 +53,10 @@ func (a *App) setupUI() {
 }
 
 func (a *App) render() {
-	log.Printf("app: render ...")
+	wlog.Infof("app: render ...")
 	a.header.render()
 	a.main.render()
 	a.footer.render()
 	a.root.Invalidate()
-	log.Printf("app: render ... done")
+	wlog.Infof("app: render ... done")
 }
