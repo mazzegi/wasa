@@ -1,0 +1,3 @@
+var wasaenv = {
+    api: "noapi"
+}

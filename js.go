@@ -51,8 +51,8 @@ func (e jsElt) jsValue() js.Value {
 	return e.jElt
 }
 
-func (e jsElt) call(method string, args ...interface{}) {
-	e.jElt.Call(method, args...)
+func (e jsElt) call(method string, args ...interface{}) js.Value {
+	return e.jElt.Call(method, args...)
 }
 
 func (e jsElt) get(names ...string) js.Value {

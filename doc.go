@@ -20,6 +20,7 @@ type Document struct {
 	focus       *Elt
 	renderC     chan struct{}
 	afterRender []func()
+	afterMount  []func()
 }
 
 func NewDocument(title string) (*Document, error) {
@@ -91,6 +92,12 @@ func (d *Document) Focus(elt *Elt) {
 	d.focus = elt
 }
 
+func (d *Document) BodyDimensions() (int, int) {
+	w := d.body.get("clientWidth").Float()
+	h := d.body.get("clientHeight").Float()
+	return int(w), int(h)
+}
+
 //Callbacks
 func (d *Document) Callback(eventType string, elt *Elt, cb ElementCallback) {
 	d.registerEvent(eventType)
@@ -132,6 +139,10 @@ func (d *Document) AfterRender(cb func()) {
 	d.afterRender = append(d.afterRender, cb)
 }
 
+func (d *Document) AfterMount(cb func()) {
+	d.afterMount = append(d.afterMount, cb)
+}
+
 func (d *Document) SignalRender() {
 	d.renderC <- struct{}{}
 }
@@ -140,6 +151,9 @@ func (d *Document) Run(root *Elt) {
 	wlog.Infof("doc: enter render loop ...")
 	d.root = root
 	d.root.mount(d, d.body)
+	for _, cb := range d.afterMount {
+		cb()
+	}
 	for {
 		select {
 		case <-d.renderC:

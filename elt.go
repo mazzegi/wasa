@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"syscall/js"
 
+	"github.com/mazzegi/wasa/wlog"
 	"github.com/pkg/errors"
 )
 
@@ -60,14 +61,22 @@ func (e *Elt) computeHash() {
 func (e *Elt) Invalidate() {
 	e.modified = true
 	for _, c := range e.Childs {
-		c.Invalidate()
+		if c != nil {
+			c.Invalidate()
+		} else {
+			wlog.Errorf("child is nil (this = %s, %v)", e.Tag, e.Attrs)
+		}
 	}
 }
 
 func (e *Elt) accept() {
 	e.modified = false
 	for _, c := range e.Childs {
-		c.accept()
+		if c != nil {
+			c.accept()
+		} else {
+			wlog.Errorf("child is nil (this = %s, %v)", e.Tag, e.Attrs)
+		}
 	}
 }
 
@@ -170,10 +179,11 @@ func (e *Elt) findCallback(event string) (ElementCallback, bool) {
 }
 
 // // some access helpers
-func (e *Elt) Call(method string, args ...interface{}) {
+func (e *Elt) Call(method string, args ...interface{}) js.Value {
 	if e.jsElt.isValid() {
-		e.jsElt.call(method, args...)
+		return e.jsElt.call(method, args...)
 	}
+	return js.Undefined()
 }
 
 func (e *Elt) Get(names ...string) js.Value {
