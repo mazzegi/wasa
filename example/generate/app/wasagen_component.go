@@ -4,7 +4,7 @@ import (
 	"github.com/mazzegi/wasa"
 )
 
-var styleComponent = `
+var styleDetailsComponent = `
 html{
     height: 100%;
 }
@@ -21,32 +21,32 @@ body{
 }
 `
 
-type Type1 struct {
+type DetailsType1 struct {
 	root *wasa.Elt
 }
 
-func (e *Type1) Elt() *wasa.Elt {
+func (e *DetailsType1) Elt() *wasa.Elt {
 	return e.root
 }
 
-func NewType1() *Type1 {
-	e := &Type1{}
+func NewDetailsType1() *DetailsType1 {
+	e := &DetailsType1{}
 	e.root = wasa.NewElt("div")
-	e.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(styleComponent)))
+	e.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(styleDetailsComponent)))
 	return e
 }
 
-type Complex struct {
+type DetailsComplex struct {
 	root *wasa.Elt
 	List *wasa.Elt
 }
 
-func (e *Complex) Elt() *wasa.Elt {
+func (e *DetailsComplex) Elt() *wasa.Elt {
 	return e.root
 }
 
-func NewComplex() *Complex {
-	e := &Complex{}
+func NewDetailsComplex() *DetailsComplex {
+	e := &DetailsComplex{}
 	e.root = wasa.NewElt("div")
 	wasa.Attr("class", "complex")(e.root)
 
@@ -55,22 +55,22 @@ func NewComplex() *Complex {
 	return e
 }
 
-type Component struct {
+type DetailsComponent struct {
 	root      *wasa.Elt
 	Label     *wasa.Elt
 	Button    *wasa.Elt
-	Complex   *Complex
-	Clockwise *Type1
+	Complex   *DetailsComplex
+	Clockwise *DetailsType1
 }
 
-func (e *Component) Elt() *wasa.Elt {
+func (e *DetailsComponent) Elt() *wasa.Elt {
 	return e.root
 }
 
-func NewComponent() *Component {
-	e := &Component{}
+func NewDetailsComponent() *DetailsComponent {
+	e := &DetailsComponent{}
 	e.root = wasa.NewElt("div")
-	e.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(styleComponent)))
+	e.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(styleDetailsComponent)))
 	wasa.Attr("class", "component")(e.root)
 
 	e.Label = wasa.NewElt("label")
@@ -81,10 +81,10 @@ func NewComponent() *Component {
 	wasa.Data("Button")(e.Button)
 	e.root.Append(e.Button)
 
-	e.Complex = NewComplex()
+	e.Complex = NewDetailsComplex()
 	e.root.Append(e.Complex.Elt())
 
-	e.Clockwise = NewType1()
+	e.Clockwise = NewDetailsType1()
 	e.root.Append(e.Clockwise.Elt())
 	return e
 }

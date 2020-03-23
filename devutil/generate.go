@@ -1,4 +1,4 @@
-package gen
+package devutil
 
 import (
 	"fmt"
@@ -69,10 +69,10 @@ func mustSkip(n *html.Node) bool {
 	return true
 }
 
-func wasaType(n *html.Node) string {
+func wasaType(n *html.Node, prefix string) string {
 	for _, attr := range n.Attr {
 		if attr.Key == "wasa-type" {
-			return norm(attr.Val)
+			return prefix + norm(attr.Val)
 		}
 	}
 	return ""
@@ -119,19 +119,34 @@ func (g *Generator) Process(in io.Reader, out io.Writer, name, pkg string) error
 		return errors.Wrap(err, "parse html")
 	}
 
+	prefix := ""
+	for _, n := range nodes {
+		if n.Type == html.ElementNode && n.Data == "wasa" {
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				if c.Type == html.ElementNode && c.Data == "prefix" && c.FirstChild != nil && c.FirstChild.Type == html.TextNode {
+					prefix = c.FirstChild.Data
+					fmt.Printf("assign prefix: %s\n", prefix)
+				}
+			}
+		}
+	}
+
 	types := []*structType{}
 	for _, n := range nodes {
 		if mustSkip(n) {
 			continue
 		}
+		if n.Type == html.ElementNode && n.Data == "wasa" {
+			continue
+		}
 		fmt.Printf("process %s\n", n.Data)
-		wsType := wasaType(n)
+		wsType := wasaType(n, prefix)
 		if wsType == "" {
 			fmt.Printf("WARN: skipping node due to missing wasa-type\n")
 			continue
 		}
 		st := newStructType(wsType, wsType)
-		err := st.process(n)
+		err := st.process(n, prefix)
 		if err != nil {
 			return errors.Wrapf(err, "process type (%s)", wsType)
 		}
@@ -144,7 +159,7 @@ func (g *Generator) Process(in io.Reader, out io.Writer, name, pkg string) error
 	style := style(nodes)
 	varStyle := ""
 	if style != "" {
-		varStyle = fmt.Sprintf("style%s", strings.Title(name))
+		varStyle = fmt.Sprintf("style%s%s", prefix, strings.Title(norm(name)))
 		code := fmt.Sprintf("var %s = `\n", varStyle)
 		code += style + "\n`\n\n"
 		fmt.Fprint(out, code)
@@ -189,7 +204,7 @@ func newStructType(typeName string, name string) *structType {
 	}
 }
 
-func (t *structType) process(n *html.Node) error {
+func (t *structType) process(n *html.Node, prefix string) error {
 	t.tag = n.Data
 	t.attrs = n.Attr
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -201,7 +216,7 @@ func (t *structType) process(n *html.Node) error {
 			fmt.Printf("WARN: skipping node due to missing wasa-name\n")
 			continue
 		}
-		wsType := wasaType(c)
+		wsType := wasaType(c, prefix)
 		if c.Type == html.ElementNode && c.Data == "yield" {
 			if wsType == "" {
 				fmt.Printf("WARN: skipping yield-node due to missing wasa-type\n")
@@ -234,7 +249,7 @@ func (t *structType) process(n *html.Node) error {
 			}
 
 			st := newStructType(wsType, wsName)
-			err := st.process(c)
+			err := st.process(c, prefix)
 			if err != nil {
 				return errors.Wrapf(err, "process (%s)", wsType)
 			}

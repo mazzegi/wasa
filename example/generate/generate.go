@@ -5,11 +5,11 @@ package main
 import (
 	"log"
 
-	"github.com/mazzegi/wasa/gen"
+	"github.com/mazzegi/wasa/devutil"
 )
 
 func main() {
-	g, err := gen.NewGenerator()
+	g, err := devutil.NewGenerator()
 	if err != nil {
 		log.Fatalf("new-generator: %v", err)
 	}
