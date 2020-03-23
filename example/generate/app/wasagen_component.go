@@ -17,7 +17,7 @@ body{
 .root{
     height: 100%;	
     margin: auto;
-    width: 70%;
+    width: 70%;    
 }
 `
 
@@ -60,7 +60,7 @@ type Component struct {
 	Label     *wasa.Elt
 	Button    *wasa.Elt
 	Complex   *Complex
-	Clockwise *wasa.Elt
+	Clockwise *Type1
 }
 
 func (e *Component) Elt() *wasa.Elt {
@@ -84,7 +84,7 @@ func NewComponent() *Component {
 	e.Complex = NewComplex()
 	e.root.Append(e.Complex.Elt())
 
-	e.Clockwise = wasa.NewElt("yield")
-	e.root.Append(e.Clockwise)
+	e.Clockwise = NewType1()
+	e.root.Append(e.Clockwise.Elt())
 	return e
 }

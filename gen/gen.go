@@ -168,6 +168,11 @@ type simpleElement struct {
 	data  string
 }
 
+type yieldedElement struct {
+	name string
+	typ  string
+}
+
 type structType struct {
 	typeName string
 	name     string
@@ -196,7 +201,17 @@ func (t *structType) process(n *html.Node) error {
 			fmt.Printf("WARN: skipping node due to missing wasa-name\n")
 			continue
 		}
-		if c.FirstChild == nil {
+		wsType := wasaType(c)
+		if c.Type == html.ElementNode && c.Data == "yield" {
+			if wsType == "" {
+				fmt.Printf("WARN: skipping yield-node due to missing wasa-type\n")
+				continue
+			}
+			t.childs = append(t.childs, &yieldedElement{
+				name: wsName,
+				typ:  wsType,
+			})
+		} else if c.FirstChild == nil {
 			t.childs = append(t.childs, &simpleElement{
 				name:  wsName,
 				tag:   c.Data,
@@ -213,7 +228,6 @@ func (t *structType) process(n *html.Node) error {
 			})
 		} else {
 			//first child is a non-text element - start new struct type
-			wsType := wasaType(c)
 			if wsType == "" {
 				fmt.Printf("WARN: skipping node due to missing wasa-type\n")
 				continue
@@ -246,6 +260,8 @@ func (t *structType) generateCode(varStyle string) []string {
 		case *structType:
 			writeLine("    %s *%s", c.name, c.typeName)
 			subs = append(subs, c.generateCode("")...)
+		case *yieldedElement:
+			writeLine("    %s *%s", c.name, c.typ)
 		}
 	}
 	writeLine("}\n")
@@ -283,6 +299,9 @@ func (t *structType) generateCode(varStyle string) []string {
 			writeLine("    e.root.Append(e.%s)", child.name)
 		case *structType:
 			writeLine("    e.%s = New%s()", child.name, child.typeName)
+			writeLine("    e.root.Append(e.%s.Elt())", child.name)
+		case *yieldedElement:
+			writeLine("    e.%s = New%s()", child.name, child.typ)
 			writeLine("    e.root.Append(e.%s.Elt())", child.name)
 		}
 	}
