@@ -6,7 +6,7 @@ import (
 )
 
 type App struct {
-	comp *Component
+	comp *DetailsComponent
 	doc  *wasa.Document
 }
 
@@ -30,5 +30,5 @@ func (a *App) Run() {
 }
 
 func (a *App) setupUI() {
-	a.comp = NewComponent()
+	a.comp = NewDetailsComponent()
 }
