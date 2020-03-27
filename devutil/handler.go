@@ -24,17 +24,25 @@ type MakeServeHandler struct {
 	hooks []func()
 }
 
-func NewMakeServeHandler(src, dist, wasm string) (*MakeServeHandler, error) {
-	//build once
-	err := Make(src, dist)
-	if err != nil {
-		return nil, errors.Wrap(err, "initial build")
-	}
-
+func NewMakeServeHandler(src, dist, wasm string, opts ...HandlerOption) (*MakeServeHandler, error) {
 	h := &MakeServeHandler{
 		src:  src,
 		dist: dist,
 		wasm: wasm,
+	}
+	for _, opt := range opts {
+		err := opt(h)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, hf := range h.hooks {
+		hf()
+	}
+	//build once
+	err := Make(src, dist)
+	if err != nil {
+		return nil, errors.Wrap(err, "initial build")
 	}
 	return h, nil
 }
@@ -44,7 +52,6 @@ func (h *MakeServeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		for _, hf := range h.hooks {
 			hf()
 		}
-
 		err := Make(h.src, h.dist)
 		if err != nil {
 			serr := fmt.Sprintf("error building wasm: %v", err)
