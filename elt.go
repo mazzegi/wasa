@@ -22,6 +22,7 @@ type Elt struct {
 	Childs    Elts
 	Data      string
 	Hidden    bool
+	Mounted   bool
 	Callbacks map[string]ElementCallback
 	hash      []byte
 	key       string
@@ -71,6 +72,7 @@ func (e *Elt) Invalidate() {
 
 func (e *Elt) accept() {
 	e.modified = false
+	e.Mounted = true
 	for _, c := range e.Childs {
 		if c != nil {
 			c.accept()
@@ -128,6 +130,7 @@ func (e *Elt) Append(elts ...*Elt) {
 
 func (e *Elt) RemoveAll() {
 	for _, c := range e.Childs {
+		c.Mounted = false
 		c.RemoveAll()
 		c.jsElt.remove()
 	}
@@ -137,6 +140,7 @@ func (e *Elt) RemoveAll() {
 func (e *Elt) Remove(re *Elt) {
 	for i, c := range e.Childs {
 		if c.jsElt.is(re.jsElt.jElt) {
+			c.Mounted = false
 			c.RemoveAll()
 			c.jsElt.remove()
 			e.Childs = append(e.Childs[:i], e.Childs[i+1:]...)
@@ -194,6 +198,10 @@ func (e *Elt) Value() string {
 	return e.jsElt.jElt.Get("value").String()
 }
 
+func (e *Elt) Is(target js.Value) bool {
+	return e.jsElt.is(target)
+}
+
 func (e *Elt) findByTarget(target js.Value) (match *Elt, stack []*Elt, found bool) {
 	stack = []*Elt{e}
 	if e.jsElt.is(target) {
@@ -216,6 +224,7 @@ func NewElt(tag string, mods ...EltMod) *Elt {
 		Tag:       tag,
 		Attrs:     Attrs{},
 		Callbacks: map[string]ElementCallback{},
+		Mounted:   false,
 	}
 	for _, mod := range mods {
 		mod(e)

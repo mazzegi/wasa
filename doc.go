@@ -115,6 +115,7 @@ func (d *Document) registerEvent(eventType string) {
 			return err
 		}
 		wlog.Infof("doc:on: (%s) -> (%s)", eventType, evt.TargetID())
+		wlog.Raw("target:", evt.Target())
 		start := time.Now()
 		if _, stack, ok := d.root.findByTarget(evt.Target()); ok {
 			if len(stack) > 0 {
@@ -152,6 +153,9 @@ func (d *Document) Run(root *Elt) {
 	d.root = root
 	d.root.mount(d, d.body)
 	for _, cb := range d.afterMount {
+		cb()
+	}
+	for _, cb := range d.afterRender {
 		cb()
 	}
 	for {

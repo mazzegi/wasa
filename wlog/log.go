@@ -12,6 +12,7 @@ import (
 type Logger interface {
 	Infof(format string, args ...interface{})
 	Errorf(format string, args ...interface{})
+	Raw(args ...interface{})
 }
 
 var logger Logger
@@ -31,12 +32,20 @@ func (l *DefaultLogger) Errorf(format string, args ...interface{}) {
 	log.Printf("[ERROR] :"+format, args...)
 }
 
+func (l *DefaultLogger) Raw(args ...interface{}) {
+	log.Println(args...)
+}
+
 func Infof(format string, args ...interface{}) {
 	logger.Infof(format, args...)
 }
 
 func Errorf(format string, args ...interface{}) {
 	logger.Errorf(format, args...)
+}
+
+func Raw(args ...interface{}) {
+	logger.Raw(args...)
 }
 
 type ConsoleLogger struct {
@@ -66,4 +75,8 @@ func (l *ConsoleLogger) Infof(format string, args ...interface{}) {
 func (l *ConsoleLogger) Errorf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	l.jsCon.Call("log", "%c"+formatNow()+" [ERROR] "+msg, "color: red;")
+}
+
+func (l *ConsoleLogger) Raw(args ...interface{}) {
+	l.jsCon.Call("log", args...)
 }
