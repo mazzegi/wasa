@@ -1,11 +1,10 @@
 package wasa
 
 import (
-	"crypto/md5"
 	"syscall/js"
 
+	"github.com/mazzegi/wasa/errors"
 	"github.com/mazzegi/wasa/wlog"
-	"github.com/pkg/errors"
 )
 
 type ElementCallback func(e *Event)
@@ -22,41 +21,12 @@ type Elt struct {
 	Childs    Elts
 	Data      string
 	Hidden    bool
-	Mounted   bool
 	Callbacks map[string]ElementCallback
-	hash      []byte
 	key       string
 }
 
 func (e *Elt) Key() string {
 	return e.key
-}
-
-func (e *Elt) Hash() []byte {
-	if len(e.hash) == 0 {
-		e.computeHash()
-	}
-	return e.hash
-}
-
-func (e *Elt) computeHash() {
-	hasher := md5.New()
-	hasher.Write([]byte(e.Tag))
-	for ak, av := range e.Attrs {
-		hasher.Write([]byte(ak))
-		hasher.Write([]byte(av))
-	}
-	hasher.Write([]byte(e.Data))
-	if e.Hidden {
-		hasher.Write([]byte{0})
-	} else {
-		hasher.Write([]byte{1})
-	}
-	for _, c := range e.Childs {
-		c.computeHash()
-		hasher.Write(c.hash)
-	}
-	e.hash = hasher.Sum(nil)
 }
 
 func (e *Elt) Invalidate() {
@@ -72,7 +42,6 @@ func (e *Elt) Invalidate() {
 
 func (e *Elt) accept() {
 	e.modified = false
-	e.Mounted = true
 	for _, c := range e.Childs {
 		if c != nil {
 			c.accept()
@@ -91,7 +60,6 @@ func (e *Elt) mount(doc *Document, parent jsElt) error {
 	if !gsxElt.isValid() {
 		parent.appendChild(eNode)
 	} else {
-		//-- this certainly produces memory leaks, as the replaced child is not removed
 		parent.replaceChild(gsxElt, eNode)
 		gsxElt.remove()
 	}
@@ -130,7 +98,6 @@ func (e *Elt) Append(elts ...*Elt) {
 
 func (e *Elt) RemoveAll() {
 	for _, c := range e.Childs {
-		c.Mounted = false
 		c.RemoveAll()
 		c.jsElt.remove()
 	}
@@ -140,7 +107,6 @@ func (e *Elt) RemoveAll() {
 func (e *Elt) Remove(re *Elt) {
 	for i, c := range e.Childs {
 		if c.jsElt.is(re.jsElt.jElt) {
-			c.Mounted = false
 			c.RemoveAll()
 			c.jsElt.remove()
 			e.Childs = append(e.Childs[:i], e.Childs[i+1:]...)
@@ -224,18 +190,11 @@ func NewElt(tag string, mods ...EltMod) *Elt {
 		Tag:       tag,
 		Attrs:     Attrs{},
 		Callbacks: map[string]ElementCallback{},
-		Mounted:   false,
 	}
 	for _, mod := range mods {
 		mod(e)
 	}
 	return e
-}
-
-func Hash(h []byte) EltMod {
-	return func(e *Elt) {
-		e.hash = h
-	}
 }
 
 func Key(k string) EltMod {

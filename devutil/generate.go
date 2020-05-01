@@ -14,10 +14,15 @@ import (
 type Option func(*Generator) error
 
 type Generator struct {
+	types map[string]struct{}
+	names map[string]struct{}
 }
 
 func NewGenerator(opts ...Option) (*Generator, error) {
-	g := &Generator{}
+	g := &Generator{
+		types: map[string]struct{}{},
+		names: map[string]struct{}{},
+	}
 	for _, opt := range opts {
 		err := opt(g)
 		if err != nil {
@@ -69,7 +74,7 @@ func mustSkip(n *html.Node) bool {
 	return true
 }
 
-func wasaType(n *html.Node, prefix string) string {
+func (g *Generator) wasaType(n *html.Node, prefix string) string {
 	for _, attr := range n.Attr {
 		if attr.Key == "wasa-type" {
 			return prefix + norm(attr.Val)
@@ -78,13 +83,71 @@ func wasaType(n *html.Node, prefix string) string {
 	return ""
 }
 
-func wasaName(n *html.Node) string {
+func (g *Generator) wasaName(n *html.Node) string {
 	for _, attr := range n.Attr {
 		if attr.Key == "wasa-name" {
 			return norm(attr.Val)
 		}
 	}
 	return ""
+}
+
+func (g *Generator) uniqueType(ty string) string {
+	contains := func(s string) bool {
+		if _, ok := g.types[s]; ok {
+			return true
+		}
+		return false
+	}
+	i := 0
+	cand := ty
+	for contains(cand) {
+		i++
+		cand = fmt.Sprintf("%s%d", ty, i)
+	}
+	return cand
+}
+
+func (g *Generator) uniqueName(name string) string {
+	contains := func(s string) bool {
+		if _, ok := g.types[s]; ok {
+			return true
+		}
+		return false
+	}
+	i := 0
+	cand := name
+	for contains(cand) {
+		i++
+		cand = fmt.Sprintf("%s%d", name, i)
+	}
+	return cand
+}
+
+func (g *Generator) forceWasaType(n *html.Node, prefix string) string {
+	if s := g.wasaType(n, prefix); s != "" {
+		return s
+	}
+	ty := g.uniqueType(prefix + norm(n.Data))
+	g.useType(ty)
+	return ty
+}
+
+func (g *Generator) forceWasaName(n *html.Node) string {
+	if s := g.wasaName(n); s != "" {
+		return s
+	}
+	name := g.uniqueName(norm(n.Data))
+	g.useName(name)
+	return name
+}
+
+func (g *Generator) useType(ty string) {
+	g.types[ty] = struct{}{}
+}
+
+func (g *Generator) useName(name string) {
+	g.names[name] = struct{}{}
 }
 
 func norm(s string) string {
@@ -140,13 +203,14 @@ func (g *Generator) Process(in io.Reader, out io.Writer, name, pkg string) error
 			continue
 		}
 		fmt.Printf("process %s\n", n.Data)
-		wsType := wasaType(n, prefix)
-		if wsType == "" {
-			fmt.Printf("WARN: skipping node due to missing wasa-type\n")
-			continue
-		}
+		wsType := g.forceWasaType(n, prefix)
+		// wsType := g.wasaType(n, prefix)
+		// if wsType == "" {
+		// 	fmt.Printf("WARN: skipping node due to missing wasa-type\n")
+		// 	continue
+		// }
 		st := newStructType(wsType, wsType)
-		err := st.process(n, prefix)
+		err := st.process(g, n, prefix)
 		if err != nil {
 			return errors.Wrapf(err, "process type (%s)", wsType)
 		}
@@ -204,20 +268,22 @@ func newStructType(typeName string, name string) *structType {
 	}
 }
 
-func (t *structType) process(n *html.Node, prefix string) error {
+func (t *structType) process(g *Generator, n *html.Node, prefix string) error {
 	t.tag = n.Data
 	t.attrs = n.Attr
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		if mustSkip(c) {
 			continue
 		}
-		wsName := wasaName(c)
-		if wsName == "" {
-			fmt.Printf("WARN: skipping node due to missing wasa-name\n")
-			continue
-		}
-		wsType := wasaType(c, prefix)
+		wsName := g.forceWasaName(c)
+		// wsName := g.wasaName(c)
+		// if wsName == "" {
+		// 	fmt.Printf("WARN: skipping node due to missing wasa-name\n")
+		// 	continue
+		// }
+
 		if c.Type == html.ElementNode && c.Data == "yield" {
+			wsType := g.wasaType(c, prefix)
 			if wsType == "" {
 				fmt.Printf("WARN: skipping yield-node due to missing wasa-type\n")
 				continue
@@ -242,14 +308,15 @@ func (t *structType) process(n *html.Node, prefix string) error {
 				data:  data,
 			})
 		} else {
+			wsType := g.forceWasaType(c, prefix)
 			//first child is a non-text element - start new struct type
-			if wsType == "" {
-				fmt.Printf("WARN: skipping node due to missing wasa-type\n")
-				continue
-			}
+			// if wsType == "" {
+			// 	fmt.Printf("WARN: skipping node due to missing wasa-type\n")
+			// 	continue
+			// }
 
 			st := newStructType(wsType, wsName)
-			err := st.process(c, prefix)
+			err := st.process(g, c, prefix)
 			if err != nil {
 				return errors.Wrapf(err, "process (%s)", wsType)
 			}

@@ -6,7 +6,7 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/mazzegi/wasa/errors"
 )
 
 type Logger interface {

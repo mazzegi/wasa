@@ -5,9 +5,9 @@ import (
 	"syscall/js"
 	"time"
 
+	"github.com/mazzegi/wasa/errors"
 	"github.com/mazzegi/wasa/timing"
 	"github.com/mazzegi/wasa/wlog"
-	"github.com/pkg/errors"
 )
 
 type Document struct {

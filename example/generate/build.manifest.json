@@ -1,4 +1,5 @@
 {
+    "build": "go",
     "main": "cmd/main.go",    
     "env": "env.js"
 }

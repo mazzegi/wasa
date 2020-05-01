@@ -3,7 +3,7 @@ package wasa
 import (
 	"syscall/js"
 
-	"github.com/pkg/errors"
+	"github.com/mazzegi/wasa/errors"
 )
 
 type Event struct {

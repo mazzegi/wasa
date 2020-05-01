@@ -2,13 +2,16 @@ package devutil
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 )
 
 type Manifest struct {
+	Build     string `json:"build"`
 	MainGo    string `json:"main"`
 	AssetsDir string `json:"assets,omitempty"`
 	CSSDir    string `json:"css,omitempty"`
@@ -87,11 +90,20 @@ func Make(srcDir, distDir string) error {
 	}
 
 	//build
+	start := time.Now()
 	lib := filepath.Join(distDir, "lib.wasm")
-	err = BuildWASM(manifest.MainGo, lib)
+	switch manifest.Build {
+	case "tinygo":
+		fmt.Println("build tinygo ...")
+		err = BuildWASMTiny(manifest.MainGo, lib)
+	default:
+		fmt.Println("build go ...")
+		err = BuildWASM(manifest.MainGo, lib)
+	}
 	if err != nil {
 		return errors.Wrapf(err, "build (%s)", manifest.MainGo)
 	}
+	fmt.Println("build done in", time.Since(start))
 
 	return nil
 }
