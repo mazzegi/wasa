@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/mazzegi/wasa"
 	"github.com/mazzegi/wasa/example/todomvc/backend"
+	"github.com/mazzegi/wasa/wlog"
 )
 
 type Header struct {
@@ -36,8 +37,9 @@ func (e *Header) setupUI() {
 	)
 	e.doc.Callback(wasa.KeyupEvent, e.input, func(evt *wasa.Event) {
 		code := evt.JSEvent().Get("keyCode").Int()
+		wlog.Raw("keyup", code)
 		if code == 13 {
-			e.backend.Add(e.input.Value())
+			e.backend.Add(e.input.GetValue())
 		}
 	})
 	e.root.Append(e.input)

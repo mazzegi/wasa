@@ -53,9 +53,9 @@ func (a *App) setupUI() {
 		controlContainer,
 	)
 
-	a.doc.AfterMount(func() {
-		a.canvas.InitCtx()
-	})
+	// a.doc.AfterMount(func() {
+	// 	a.canvas.InitCtx()
+	// })
 }
 
 func (a *App) renderCanvas() {

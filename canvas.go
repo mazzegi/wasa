@@ -34,8 +34,8 @@ func (c *Canvas) InitCtx() {
 	c.ctx = c.elt.Call("getContext", "2d")
 	w := c.elt.Get("clientWidth").Int()
 	h := c.elt.Get("clientHeight").Int()
-	c.elt.jsElt.jElt.Set("width", w)
-	c.elt.jsElt.jElt.Set("height", h)
+	c.elt.Set("width", w)
+	c.elt.Set("height", h)
 	c.initialized = true
 }
 
