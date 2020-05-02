@@ -20,9 +20,9 @@ func NewMain(doc *wasa.Document, backend *backend.Backend) *Main {
 		backend: backend,
 	}
 	e.setupUI()
-	e.doc.AfterRender(func() {
-		wlog.Infof("after-render")
-	})
+	// e.doc.AfterRender(func() {
+	// 	wlog.Infof("after-render")
+	// })
 	return e
 }
 
@@ -43,14 +43,14 @@ func (e *Main) setupUI() {
 		toggleAllLabel,
 		e.todoList,
 	)
-	e.root.Hidden = true
+	e.root.Hide()
 }
 
 func (e *Main) render() {
 	if e.backend.IsEmpty() {
-		e.root.Hidden = true
+		e.root.Hide()
 	} else {
-		e.root.Hidden = false
+		e.root.Show()
 	}
 	e.todoList.RemoveAll()
 	e.backend.Each(e.renderItem)

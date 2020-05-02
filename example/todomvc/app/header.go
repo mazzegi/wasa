@@ -43,8 +43,10 @@ func (e *Header) setupUI() {
 		}
 	})
 	e.root.Append(e.input)
+	e.root.LCC.On(wasa.Rendered, func() {
+		e.input.Call("focus")
+	})
 }
 
 func (e *Header) render() {
-	e.doc.Focus(e.input)
 }

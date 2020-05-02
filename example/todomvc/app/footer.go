@@ -78,14 +78,14 @@ func (e *Footer) setupUI() {
 	})
 
 	e.root.Append(e.cntElt, ulFilterElt, clearCompletedElt)
-	e.root.Hidden = true
+	e.root.Hide()
 }
 
 func (e *Footer) render() {
 	if e.backend.IsEmpty() {
-		e.root.Hidden = true
+		e.root.Hide()
 	} else {
-		e.root.Hidden = false
+		e.root.Show()
 	}
 	wasa.Data(fmt.Sprintf("%d item(s) left", e.backend.Count()))(e.cntElt)
 

@@ -18,24 +18,103 @@ type Attrs map[string]string
 
 type Elts []*Elt
 
+type LCEvent string
+
+const (
+	Mounted   LCEvent = "mounted"
+	Unmounted LCEvent = "unmounted"
+	Rendered  LCEvent = "rendered"
+)
+
+type LCC struct {
+	events map[LCEvent]func()
+}
+
+func (lcc *LCC) On(evt LCEvent, cb func()) {
+	if lcc.events == nil {
+		lcc.events = map[LCEvent]func(){}
+	}
+	lcc.events[evt] = cb
+}
+
+func (lcc *LCC) callback(evt LCEvent) {
+	if cb, ok := lcc.events[evt]; ok {
+		cb()
+	}
+}
+
 type Elt struct {
 	js.Value
 	modified  bool
+	hidden    bool
 	Tag       string
 	Attrs     Attrs
 	Childs    Elts
 	Data      string
-	Hidden    bool
 	Callbacks map[string]ElementCallback
 	key       string
+	LCC       LCC
 }
 
 func (e *Elt) Key() string {
 	return e.key
 }
 
+func (e *Elt) IsHidden() bool {
+	return e.hidden
+}
+
+func (e *Elt) IsVisible() bool {
+	return !e.hidden
+}
+
+func (e *Elt) Hide() {
+	e.hidden = true
+	for _, c := range e.Childs {
+		c.Hide()
+	}
+}
+
+func (e *Elt) Show() {
+	e.hidden = false
+	for _, c := range e.Childs {
+		c.Show()
+	}
+}
+
+func (e *Elt) mounted() {
+	if e.hidden {
+		return
+	}
+	e.LCC.callback(Mounted)
+	for _, c := range e.Childs {
+		c.mounted()
+	}
+}
+
+func (e *Elt) unmounted() {
+	if e.hidden {
+		return
+	}
+	e.LCC.callback(Mounted)
+	for _, c := range e.Childs {
+		c.unmounted()
+	}
+}
+
+func (e *Elt) rendered() {
+	if e.hidden {
+		return
+	}
+	e.LCC.callback(Rendered)
+	for _, c := range e.Childs {
+		c.rendered()
+	}
+}
+
 func (e *Elt) Invalidate() {
 	e.modified = true
+	//e.LCC.callback(Unmounted)
 	for _, c := range e.Childs {
 		if c != nil {
 			c.Invalidate()
@@ -69,6 +148,7 @@ func (e *Elt) mount(doc *Document, parent js.Value) error {
 		oldV.Call("remove")
 	}
 	e.accept()
+	e.mounted()
 	return nil
 }
 
@@ -84,7 +164,7 @@ func (e *Elt) createJSElt(doc *Document) (js.Value, error) {
 		eNode.Set("innerHTML", e.Data)
 	}
 	for _, c := range e.Childs {
-		if c.Hidden {
+		if c.hidden {
 			continue
 		}
 		cNode, err := c.createJSElt(doc)
@@ -255,6 +335,6 @@ func Data(s string) EltMod {
 
 func Hidden(h bool) EltMod {
 	return func(e *Elt) {
-		e.Hidden = h
+		e.hidden = h
 	}
 }

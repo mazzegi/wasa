@@ -40,6 +40,9 @@ func (a *App) setupUI() {
 	canvasContainer := wasa.NewElt(wasa.DivTag, wasa.Class("canvas-container"))
 	a.canvas = wasa.NewCanvas("canvas", "canvas")
 	canvasContainer.Append(a.canvas.Elt())
+	canvasContainer.LCC.On(wasa.Mounted, func() {
+		a.canvas.InitCtx()
+	})
 
 	controlContainer := wasa.NewElt(wasa.DivTag, wasa.Class("control-container"))
 	btn := wasa.NewElt(wasa.ButtonTag, wasa.Data("Start"))

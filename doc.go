@@ -3,24 +3,19 @@ package wasa
 import (
 	"net/url"
 	"syscall/js"
-	"time"
 
 	"github.com/mazzegi/wasa/errors"
-	"github.com/mazzegi/wasa/timing"
 	"github.com/mazzegi/wasa/wlog"
 )
 
 type Document struct {
 	js.Value
-	glb         js.Value
-	jDoc        js.Value
-	body        js.Value
-	events      map[string]struct{}
-	root        *Elt
-	focus       *Elt
-	renderC     chan struct{}
-	afterRender []func()
-	afterMount  []func()
+	glb     js.Value
+	jDoc    js.Value
+	body    js.Value
+	events  map[string]struct{}
+	root    *Elt
+	renderC chan struct{}
 }
 
 func NewDocument(title string) (*Document, error) {
@@ -55,7 +50,6 @@ func (d *Document) createBodyIfNotExists() error {
 			return err
 		}
 		d.body = body
-		//d.appendChild(body)
 		d.Call("appendChild", body)
 	} else {
 		jBody := bodySlice.Index(0)
@@ -89,16 +83,6 @@ func (d *Document) Location() *url.URL {
 	return url
 }
 
-func (d *Document) Focus(elt *Elt) {
-	d.focus = elt
-}
-
-func (d *Document) BodyDimensions() (int, int) {
-	w := d.body.Get("clientWidth").Float()
-	h := d.body.Get("clientHeight").Float()
-	return int(w), int(h)
-}
-
 //Callbacks
 func (d *Document) Callback(eventType string, elt *Elt, cb ElementCallback) {
 	d.registerEvent(eventType)
@@ -115,15 +99,11 @@ func (d *Document) registerEvent(eventType string) {
 		if err != nil {
 			return err
 		}
-		wlog.Infof("doc:on: (%s) -> (%s)", eventType, evt.TargetID())
-		wlog.Raw("target:", evt.Target())
-		start := time.Now()
 		if _, stack, ok := d.root.stackToTarget(evt.Target()); ok {
 			if len(stack) > 0 {
 				for i := len(stack) - 1; i >= 0; i-- {
 					if cb, ok := stack[i].findCallback(eventType); ok {
 						go func() {
-							wlog.Infof("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
 							defer d.SignalRender()
 							cb(evt)
 						}()
@@ -137,46 +117,18 @@ func (d *Document) registerEvent(eventType string) {
 	d.events[eventType] = struct{}{}
 }
 
-func (d *Document) AfterRender(cb func()) {
-	d.afterRender = append(d.afterRender, cb)
-}
-
-func (d *Document) AfterMount(cb func()) {
-	d.afterMount = append(d.afterMount, cb)
-}
-
 func (d *Document) SignalRender() {
 	d.renderC <- struct{}{}
 }
 
 func (d *Document) Run(root *Elt) {
-	wlog.Infof("doc: enter render loop ...")
 	d.root = root
 	d.root.mount(d, d.body)
-	for _, cb := range d.afterMount {
-		cb()
-	}
-	for _, cb := range d.afterRender {
-		cb()
-	}
 	for {
 		select {
 		case <-d.renderC:
-			t := timing.New("doc-render")
-			t.Log("render")
 			d.render(d.root, d.body)
-			t.Log("after-render")
-			if d.focus != nil {
-				t.Log("before-focus")
-				d.focus.Call("focus")
-				t.Log("after-focus")
-				d.focus = nil
-			}
-			for _, cb := range d.afterRender {
-				wlog.Infof("cb-after-render")
-				cb()
-			}
-			t.Log("after-render-callbacks")
+			d.root.rendered()
 		}
 	}
 }
