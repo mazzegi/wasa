@@ -99,17 +99,17 @@ func (d *Document) registerEvent(eventType string) {
 		if err != nil {
 			return err
 		}
-		if _, stack, ok := d.root.stackToTarget(evt.Target()); ok {
-			if len(stack) > 0 {
-				for i := len(stack) - 1; i >= 0; i-- {
-					if cb, ok := stack[i].findCallback(eventType); ok {
-						go func() {
-							defer d.SignalRender()
-							cb(evt)
-						}()
-						return nil
-					}
-				}
+		_, stack, ok := d.root.stackToTarget(evt.Target())
+		if !ok || len(stack) == 0 {
+			return nil
+		}
+		for i := len(stack) - 1; i >= 0; i-- {
+			if cb, ok := stack[i].findCallback(eventType); ok {
+				go func() {
+					defer d.SignalRender()
+					cb(evt)
+				}()
+				return nil
 			}
 		}
 		return nil
