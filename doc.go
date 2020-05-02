@@ -3,24 +3,19 @@ package wasa
 import (
 	"net/url"
 	"syscall/js"
-	"time"
 
 	"github.com/mazzegi/wasa/errors"
-	"github.com/mazzegi/wasa/timing"
 	"github.com/mazzegi/wasa/wlog"
 )
 
 type Document struct {
-	jsElt
-	glb         js.Value
-	jDoc        js.Value
-	body        jsElt
-	events      map[string]struct{}
-	root        *Elt
-	focus       *Elt
-	renderC     chan struct{}
-	afterRender []func()
-	afterMount  []func()
+	js.Value
+	glb     js.Value
+	jDoc    js.Value
+	body    js.Value
+	events  map[string]struct{}
+	root    *Elt
+	renderC chan struct{}
 }
 
 func NewDocument(title string) (*Document, error) {
@@ -33,7 +28,7 @@ func NewDocument(title string) (*Document, error) {
 		return nil, errors.Errorf("js-document is not valid (%s)", jDoc.Type().String())
 	}
 	doc := &Document{
-		jsElt:   newJSElt(jDoc),
+		Value:   jDoc,
 		glb:     glb,
 		jDoc:    jDoc,
 		events:  map[string]struct{}{},
@@ -55,20 +50,20 @@ func (d *Document) createBodyIfNotExists() error {
 			return err
 		}
 		d.body = body
-		d.appendChild(body)
+		d.Call("appendChild", body)
 	} else {
 		jBody := bodySlice.Index(0)
-		d.body = newJSElt(jBody)
+		d.body = jBody
 	}
 	return nil
 }
 
-func (d *Document) CreateElementNode(tag string) (jsElt, error) {
+func (d *Document) CreateElementNode(tag string) (js.Value, error) {
 	v := d.jDoc.Call("createElement", tag)
 	if !isJSValueValid(v) {
-		return undefinedJSElt(), errors.Errorf("doc-createElement returned invalid js-value (%s)", v.Type().String())
+		return js.Undefined(), errors.Errorf("doc-createElement returned invalid js-value (%s)", v.Type().String())
 	}
-	return newJSElt(v), nil
+	return v, nil
 }
 
 func (d *Document) GetGlobal(names ...string) js.Value {
@@ -88,16 +83,6 @@ func (d *Document) Location() *url.URL {
 	return url
 }
 
-func (d *Document) Focus(elt *Elt) {
-	d.focus = elt
-}
-
-func (d *Document) BodyDimensions() (int, int) {
-	w := d.body.get("clientWidth").Float()
-	h := d.body.get("clientHeight").Float()
-	return int(w), int(h)
-}
-
 //Callbacks
 func (d *Document) Callback(eventType string, elt *Elt, cb ElementCallback) {
 	d.registerEvent(eventType)
@@ -109,26 +94,22 @@ func (d *Document) registerEvent(eventType string) {
 		return
 	}
 	wlog.Infof("doc: register-event (%s)", eventType)
-	d.addEventListener(eventType, js.FuncOf(func(this js.Value, vals []js.Value) interface{} {
+	d.Call("addEventListener", eventType, js.FuncOf(func(this js.Value, vals []js.Value) interface{} {
 		evt, err := NewEvent(d, eventType, this, vals)
 		if err != nil {
 			return err
 		}
-		wlog.Infof("doc:on: (%s) -> (%s)", eventType, evt.TargetID())
-		wlog.Raw("target:", evt.Target())
-		start := time.Now()
-		if _, stack, ok := d.root.findByTarget(evt.Target()); ok {
-			if len(stack) > 0 {
-				for i := len(stack) - 1; i >= 0; i-- {
-					if cb, ok := stack[i].findCallback(eventType); ok {
-						go func() {
-							wlog.Infof("doc:on: (%s) -> (%s). found in (%s)", eventType, evt.TargetID(), time.Since(start))
-							defer d.SignalRender()
-							cb(evt)
-						}()
-						return nil
-					}
-				}
+		_, stack, ok := d.root.stackToTarget(evt.Target())
+		if !ok || len(stack) == 0 {
+			return nil
+		}
+		for i := len(stack) - 1; i >= 0; i-- {
+			if cb, ok := stack[i].findCallback(eventType); ok {
+				go func() {
+					defer d.SignalRender()
+					cb(evt)
+				}()
+				return nil
 			}
 		}
 		return nil
@@ -136,54 +117,28 @@ func (d *Document) registerEvent(eventType string) {
 	d.events[eventType] = struct{}{}
 }
 
-func (d *Document) AfterRender(cb func()) {
-	d.afterRender = append(d.afterRender, cb)
-}
-
-func (d *Document) AfterMount(cb func()) {
-	d.afterMount = append(d.afterMount, cb)
-}
-
 func (d *Document) SignalRender() {
 	d.renderC <- struct{}{}
 }
 
 func (d *Document) Run(root *Elt) {
-	wlog.Infof("doc: enter render loop ...")
 	d.root = root
 	d.root.mount(d, d.body)
-	for _, cb := range d.afterMount {
-		cb()
-	}
-	for _, cb := range d.afterRender {
-		cb()
-	}
 	for {
 		select {
 		case <-d.renderC:
-			t := timing.New("doc-render")
-			t.Log("render")
 			d.render(d.root, d.body)
-			t.Log("after-render")
-			if d.focus != nil {
-				d.focus.Call("focus")
-				t.Log("after-focus")
-				d.focus = nil
-			}
-			for _, cb := range d.afterRender {
-				cb()
-			}
-			t.Log("after-render-callbacks")
+			d.root.rendered()
 		}
 	}
 }
 
-func (d *Document) render(e *Elt, parent jsElt) {
+func (d *Document) render(e *Elt, parent js.Value) {
 	if e.modified {
 		e.mount(d, parent)
 		return
 	}
 	for _, c := range e.Childs {
-		d.render(c, e.jsElt)
+		d.render(c, e.Value)
 	}
 }

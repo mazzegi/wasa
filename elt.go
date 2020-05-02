@@ -7,30 +7,114 @@ import (
 	"github.com/mazzegi/wasa/wlog"
 )
 
+func isJSValueValid(v js.Value) bool {
+	ty := v.Type()
+	return ty != js.TypeUndefined && ty != js.TypeNull
+}
+
 type ElementCallback func(e *Event)
 
 type Attrs map[string]string
 
 type Elts []*Elt
 
+type LCEvent string
+
+const (
+	Mounted   LCEvent = "mounted"
+	Unmounted LCEvent = "unmounted"
+	Rendered  LCEvent = "rendered"
+)
+
+type LCC struct {
+	events map[LCEvent]func()
+}
+
+func (lcc *LCC) On(evt LCEvent, cb func()) {
+	if lcc.events == nil {
+		lcc.events = map[LCEvent]func(){}
+	}
+	lcc.events[evt] = cb
+}
+
+func (lcc *LCC) callback(evt LCEvent) {
+	if cb, ok := lcc.events[evt]; ok {
+		cb()
+	}
+}
+
 type Elt struct {
+	js.Value
 	modified  bool
-	jsElt     jsElt
+	hidden    bool
 	Tag       string
 	Attrs     Attrs
 	Childs    Elts
 	Data      string
-	Hidden    bool
 	Callbacks map[string]ElementCallback
 	key       string
+	LCC       LCC
 }
 
 func (e *Elt) Key() string {
 	return e.key
 }
 
+func (e *Elt) IsHidden() bool {
+	return e.hidden
+}
+
+func (e *Elt) IsVisible() bool {
+	return !e.hidden
+}
+
+func (e *Elt) Hide() {
+	e.hidden = true
+	for _, c := range e.Childs {
+		c.Hide()
+	}
+}
+
+func (e *Elt) Show() {
+	e.hidden = false
+	for _, c := range e.Childs {
+		c.Show()
+	}
+}
+
+func (e *Elt) mounted() {
+	if e.hidden {
+		return
+	}
+	e.LCC.callback(Mounted)
+	for _, c := range e.Childs {
+		c.mounted()
+	}
+}
+
+func (e *Elt) unmounted() {
+	if e.hidden {
+		return
+	}
+	e.LCC.callback(Mounted)
+	for _, c := range e.Childs {
+		c.unmounted()
+	}
+}
+
+func (e *Elt) rendered() {
+	if e.hidden {
+		return
+	}
+	e.LCC.callback(Rendered)
+	for _, c := range e.Childs {
+		c.rendered()
+	}
+}
+
 func (e *Elt) Invalidate() {
 	e.modified = true
+	//e.LCC.callback(Unmounted)
 	for _, c := range e.Childs {
 		if c != nil {
 			c.Invalidate()
@@ -51,44 +135,45 @@ func (e *Elt) accept() {
 	}
 }
 
-func (e *Elt) mount(doc *Document, parent jsElt) error {
-	gsxElt := e.jsElt
-	eNode, err := e.createJSElt(doc)
+func (e *Elt) mount(doc *Document, parent js.Value) error {
+	oldV := e.Value
+	newV, err := e.createJSElt(doc)
 	if err != nil {
 		return errors.Wrap(err, "create-element-node")
 	}
-	if !gsxElt.isValid() {
-		parent.appendChild(eNode)
+	if !isJSValueValid(oldV) {
+		parent.Call("appendChild", newV)
 	} else {
-		parent.replaceChild(gsxElt, eNode)
-		gsxElt.remove()
+		parent.Call("replaceChild", newV, oldV)
+		oldV.Call("remove")
 	}
 	e.accept()
+	e.mounted()
 	return nil
 }
 
-func (e *Elt) createJSElt(doc *Document) (jsElt, error) {
+func (e *Elt) createJSElt(doc *Document) (js.Value, error) {
 	eNode, err := doc.CreateElementNode(e.Tag)
 	if err != nil {
-		return undefinedJSElt(), errors.Wrap(err, "create element")
+		return js.Undefined(), errors.Wrap(err, "create element")
 	}
 	for k, v := range e.Attrs {
-		eNode.setAttribute(k, v)
+		eNode.Call("setAttribute", k, v)
 	}
 	if e.Data != "" {
-		eNode.setInnerHTML(e.Data)
+		eNode.Set("innerHTML", e.Data)
 	}
 	for _, c := range e.Childs {
-		if c.Hidden {
+		if c.hidden {
 			continue
 		}
 		cNode, err := c.createJSElt(doc)
 		if err != nil {
-			return undefinedJSElt(), errors.Wrap(err, "create child element node")
+			return js.Undefined(), errors.Wrap(err, "create child element node")
 		}
-		eNode.appendChild(cNode)
+		eNode.Call("appendChild", cNode)
 	}
-	e.jsElt = eNode
+	e.Value = eNode
 	return eNode, nil
 }
 
@@ -99,16 +184,16 @@ func (e *Elt) Append(elts ...*Elt) {
 func (e *Elt) RemoveAll() {
 	for _, c := range e.Childs {
 		c.RemoveAll()
-		c.jsElt.remove()
+		c.Call("remove")
 	}
 	e.Childs = Elts{}
 }
 
 func (e *Elt) Remove(re *Elt) {
 	for i, c := range e.Childs {
-		if c.jsElt.is(re.jsElt.jElt) {
+		if c.Value == re.Value {
 			c.RemoveAll()
-			c.jsElt.remove()
+			c.Call("remove")
 			e.Childs = append(e.Childs[:i], e.Childs[i+1:]...)
 			return
 		}
@@ -117,9 +202,9 @@ func (e *Elt) Remove(re *Elt) {
 
 func (e *Elt) Replace(re *Elt, ne *Elt) {
 	for i, c := range e.Childs {
-		if c.jsElt.is(re.jsElt.jElt) {
+		if c.Value == re.Value {
 			c.RemoveAll()
-			c.jsElt.remove()
+			c.Call("remove")
 			e.Childs[i] = ne
 			return
 		}
@@ -148,33 +233,36 @@ func (e *Elt) findCallback(event string) (ElementCallback, bool) {
 	return cb, ok
 }
 
-// // some access helpers
-func (e *Elt) Call(method string, args ...interface{}) js.Value {
-	if e.jsElt.isValid() {
-		return e.jsElt.call(method, args...)
+// some access helpers
+func (e *Elt) GetPath(names ...string) js.Value {
+	curr := e.Value
+	if !isJSValueValid(curr) {
+		return curr
 	}
-	return js.Undefined()
+	for _, name := range names {
+		curr = curr.Get(name)
+		if !isJSValueValid(curr) {
+			return curr
+		}
+	}
+	return curr
 }
 
-func (e *Elt) Get(names ...string) js.Value {
-	return e.jsElt.get(names...)
-}
-
-func (e *Elt) Value() string {
-	return e.jsElt.jElt.Get("value").String()
+func (e *Elt) GetValue() string {
+	return e.Get("value").String()
 }
 
 func (e *Elt) Is(target js.Value) bool {
-	return e.jsElt.is(target)
+	return e.Value == target
 }
 
-func (e *Elt) findByTarget(target js.Value) (match *Elt, stack []*Elt, found bool) {
+func (e *Elt) stackToTarget(target js.Value) (match *Elt, stack []*Elt, found bool) {
 	stack = []*Elt{e}
-	if e.jsElt.is(target) {
+	if e.Is(target) {
 		return e, stack, true
 	}
 	for _, c := range e.Childs {
-		if fc, cstack, ok := c.findByTarget(target); ok {
+		if fc, cstack, ok := c.stackToTarget(target); ok {
 			stack = append(stack, cstack...)
 			return fc, stack, true
 		}
@@ -247,6 +335,6 @@ func Data(s string) EltMod {
 
 func Hidden(h bool) EltMod {
 	return func(e *Elt) {
-		e.Hidden = h
+		e.hidden = h
 	}
 }
