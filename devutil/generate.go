@@ -49,6 +49,7 @@ func (g *Generator) ProcessDir(dir string) error {
 }
 
 func (g *Generator) ProcessFile(inFile, outFile string, name, pkg string) error {
+	fmt.Printf("*** process %q ****\n", inFile)
 	fIn, err := os.Open(inFile)
 	if err != nil {
 		return errors.Wrapf(err, "open (%s)", inFile)
@@ -206,11 +207,6 @@ func (g *Generator) Process(in io.Reader, out io.Writer, name, pkg string) error
 		}
 		fmt.Printf("process %s\n", n.Data)
 		wsType := g.forceWasaType(n, prefix)
-		// wsType := g.wasaType(n, prefix)
-		// if wsType == "" {
-		// 	fmt.Printf("WARN: skipping node due to missing wasa-type\n")
-		// 	continue
-		// }
 		st := newStructType(wsType, wsType)
 		err := st.process(g, n, prefix)
 		if err != nil {
@@ -278,12 +274,6 @@ func (t *structType) process(g *Generator, n *html.Node, prefix string) error {
 			continue
 		}
 		wsName := g.forceWasaName(c)
-		// wsName := g.wasaName(c)
-		// if wsName == "" {
-		// 	fmt.Printf("WARN: skipping node due to missing wasa-name\n")
-		// 	continue
-		// }
-
 		if c.Type == html.ElementNode && c.Data == "yield" {
 			wsType := g.wasaType(c, prefix)
 			if wsType == "" {
@@ -294,6 +284,7 @@ func (t *structType) process(g *Generator, n *html.Node, prefix string) error {
 				name: wsName,
 				typ:  wsType,
 			})
+			fmt.Printf("added yielded elt: %q/%q\n", wsName, wsType)
 		} else if c.FirstChild == nil {
 			t.childs = append(t.childs, &simpleElement{
 				name:  wsName,
@@ -311,12 +302,6 @@ func (t *structType) process(g *Generator, n *html.Node, prefix string) error {
 			})
 		} else {
 			wsType := g.forceWasaType(c, prefix)
-			//first child is a non-text element - start new struct type
-			// if wsType == "" {
-			// 	fmt.Printf("WARN: skipping node due to missing wasa-type\n")
-			// 	continue
-			// }
-
 			st := newStructType(wsType, wsName)
 			err := st.process(g, c, prefix)
 			if err != nil {
@@ -353,6 +338,11 @@ func (t *structType) generateCode(varStyle string) []string {
 	//get-element
 	writeLine("func (e *%s) Elt() *wasa.Elt {", t.typeName)
 	writeLine("    return e.root")
+	writeLine("}\n")
+
+	//append-element
+	writeLine("func (e *%s) Append(elt ...*wasa.Elt) {", t.typeName)
+	writeLine("    e.root.Append(elt...)")
 	writeLine("}\n")
 
 	//constructor
