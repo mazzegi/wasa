@@ -109,8 +109,9 @@ func (g *Generator) uniqueType(ty string) string {
 }
 
 func (g *Generator) uniqueName(name string) string {
+	fmt.Printf("find unique name for %q\n", name)
 	contains := func(s string) bool {
-		if _, ok := g.types[s]; ok {
+		if _, ok := g.names[s]; ok {
 			return true
 		}
 		return false
@@ -119,8 +120,9 @@ func (g *Generator) uniqueName(name string) string {
 	cand := name
 	for contains(cand) {
 		i++
-		cand = fmt.Sprintf("%s%d", name, i)
+		cand = fmt.Sprintf("%s_%d", name, i)
 	}
+	fmt.Printf("return unique name for %q\n", cand)
 	return cand
 }
 

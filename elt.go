@@ -191,7 +191,7 @@ func (e *Elt) RemoveAll() {
 
 func (e *Elt) Remove(re *Elt) {
 	for i, c := range e.Childs {
-		if c.Value == re.Value {
+		if c.Value.Equal(re.Value) {
 			c.RemoveAll()
 			c.Call("remove")
 			e.Childs = append(e.Childs[:i], e.Childs[i+1:]...)
@@ -202,7 +202,7 @@ func (e *Elt) Remove(re *Elt) {
 
 func (e *Elt) Replace(re *Elt, ne *Elt) {
 	for i, c := range e.Childs {
-		if c.Value == re.Value {
+		if c.Value.Equal(re.Value) {
 			c.RemoveAll()
 			c.Call("remove")
 			e.Childs[i] = ne
@@ -253,7 +253,7 @@ func (e *Elt) GetValue() string {
 }
 
 func (e *Elt) Is(target js.Value) bool {
-	return e.Value == target
+	return e.Value.Equal(target)
 }
 
 func (e *Elt) stackToTarget(target js.Value) (match *Elt, stack []*Elt, found bool) {
