@@ -321,7 +321,7 @@ func (t *structType) generateCode(varStyle string) []string {
 
 	subs := []string{}
 	writeLine("type %s struct {", t.typeName)
-	writeLine("    root *wasa.Elt")
+	writeLine("    *wasa.Elt")
 	for _, c := range t.childs {
 		switch c := c.(type) {
 		case *simpleElement:
@@ -335,26 +335,26 @@ func (t *structType) generateCode(varStyle string) []string {
 	}
 	writeLine("}\n")
 
-	//get-element
-	writeLine("func (e *%s) Elt() *wasa.Elt {", t.typeName)
-	writeLine("    return e.root")
-	writeLine("}\n")
+	// //get-element
+	// writeLine("func (e *%s) Elt() *wasa.Elt {", t.typeName)
+	// writeLine("    return e.Elt")
+	// writeLine("}\n")
 
-	//append-element
-	writeLine("func (e *%s) Append(elt ...*wasa.Elt) {", t.typeName)
-	writeLine("    e.root.Append(elt...)")
-	writeLine("}\n")
+	// //append-element
+	// writeLine("func (e *%s) Append(elt ...*wasa.Elt) {", t.typeName)
+	// writeLine("    e.Append(elt...)")
+	// writeLine("}\n")
 
 	//constructor
 	writeLine("func New%s() *%s {", t.typeName, t.typeName)
 	writeLine("    e := &%s{}", t.typeName)
-	writeLine("    e.root = wasa.NewElt(%q)", t.tag)
+	writeLine("    e.Elt = wasa.NewElt(%q)", t.tag)
 	if varStyle != "" {
-		writeLine("    e.root.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(%s)))", varStyle)
+		writeLine("    e.Append(wasa.NewElt(wasa.StyleTag, wasa.Data(%s)))", varStyle)
 	}
 	for _, attr := range t.attrs {
 		if !strings.HasPrefix(attr.Key, "wasa") {
-			writeLine("    wasa.Attr(%q, %q)(e.root)", attr.Key, attr.Val)
+			writeLine("    wasa.Attr(%q, %q)(e.Elt)", attr.Key, attr.Val)
 		}
 	}
 	for _, child := range t.childs {
@@ -370,13 +370,13 @@ func (t *structType) generateCode(varStyle string) []string {
 			if child.data != "" {
 				writeLine("    wasa.Data(%q)(e.%s)", child.data, child.name)
 			}
-			writeLine("    e.root.Append(e.%s)", child.name)
+			writeLine("    e.Append(e.%s)", child.name)
 		case *structType:
 			writeLine("    e.%s = New%s()", child.name, child.typeName)
-			writeLine("    e.root.Append(e.%s.Elt())", child.name)
+			writeLine("    e.Append(e.%s.Elt())", child.name)
 		case *yieldedElement:
 			writeLine("    e.%s = New%s()", child.name, child.typ)
-			writeLine("    e.root.Append(e.%s.Elt())", child.name)
+			writeLine("    e.Append(e.%s.Elt())", child.name)
 		}
 	}
 	writeLine("    return e")
