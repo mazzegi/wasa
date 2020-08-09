@@ -373,10 +373,10 @@ func (t *structType) generateCode(varStyle string) []string {
 			writeLine("    e.Append(e.%s)", child.name)
 		case *structType:
 			writeLine("    e.%s = New%s()", child.name, child.typeName)
-			writeLine("    e.Append(e.%s.Elt())", child.name)
+			writeLine("    e.Append(e.%s.Elt)", child.name)
 		case *yieldedElement:
 			writeLine("    e.%s = New%s()", child.name, child.typ)
-			writeLine("    e.Append(e.%s.Elt())", child.name)
+			writeLine("    e.Append(e.%s.Elt)", child.name)
 		}
 	}
 	writeLine("    return e")
